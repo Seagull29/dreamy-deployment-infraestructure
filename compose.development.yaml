@@ -1,0 +1,90 @@
+name: "dreamy-project-development"
+services:
+  main-service:
+    build:
+      context: ./dreamy-main-service
+      dockerfile: ./deployment/development.Dockerfile
+    container_name: dreamy-main-service-development
+    ports:
+      - "2120:2120"
+    environment:
+      - TZ=America/Lima
+    volumes:
+      - type: bind
+        source: ./dreamy-main-service
+        target: /usr/src/service
+    restart: always
+  
+  web-client:
+    build:
+      context: ./dreamy-web-client
+      dockerfile: ./deployment/development.Dockerfile
+    container_name: dreamy-web-client-development
+    volumes:
+      - type: bind
+        source: ./dreamy-web-client
+        target: /usr/src/service
+    ports:
+      - "5173:5173"
+    environment:
+      - TZ=America/Lima
+    restart: always
+
+  pdf-service:
+    build:
+      context: ./dreamy-pdf-service
+      dockerfile: ./deployment/development.Dockerfile
+    container_name: dreamy-pdf-service-development
+    volumes:
+      - type: bind
+        source: ./dreamy-pdf-service
+        target: /usr/src/service
+    ports:
+      - "2130:2130"
+    environment:
+      - TZ=America/Lima
+    restart: always
+  
+  database-service:
+    image: postgres:bookworm
+    container_name: dreamy-database-service-development
+    env_file:
+      - .env.development.database
+    ports:
+      - "5432:5432"
+    environment:
+      - TZ=America/Lima
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: always
+  
+  cache-service:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly
+    container_name: dreamy-cache-service-development
+    ulimits:
+      memlock: -1
+    ports:
+      - "6379:6379"
+    environment:
+      - TZ=America/Lima
+    command:
+      - "--requirepass=${DRAGONFLY_PASSWORD}"
+    volumes:
+      - dragonfly-data:/data
+    restart: always
+
+  messaging-service:
+    image: rabbitmq:management
+    container_name: dreamy-messaging-service-development
+    env_file:
+      - .env.development.messaging
+    environment:
+      - TZ=America/Lima
+    ports:
+      - "5672:5672"
+      - "15672:15672"  
+    restart: always
+
+volumes:
+  postgres-data:
+  dragonfly-data:
