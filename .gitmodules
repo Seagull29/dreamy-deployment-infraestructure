@@ -1,0 +1,9 @@
+[submodule "dreamy-main-service"]
+	path = dreamy-main-service
+	url = https://Seagull29@github.com/Seagull29/dreamy-main-service.git
+[submodule "dreamy-web-client"]
+	path = dreamy-web-client
+	url = https://Seagull29@github.com/Seagull29/dreamy-web-client.git
+[submodule "dreamy-pdf-service"]
+	path = dreamy-pdf-service
+	url = https://Seagull29@github.com/Seagull29/dreamy-pdf-service.git
