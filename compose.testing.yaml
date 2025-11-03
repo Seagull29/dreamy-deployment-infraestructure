@@ -1,0 +1,169 @@
+name: "dreamy"
+services:
+  nginx-service:
+    image: jonasal/nginx-certbot:5.5.0-nginx1.27.5
+    container_name: dreamy-reverse-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - nginx-certificates:/etc/letsencrypt
+    configs:
+      - source: custom-nginx-configuration
+        target: /etc/nginx/user_conf.d/custom-nginx.conf
+      - source: web-client-nginx-configuration
+        target: /etc/nginx/user_conf.d/web-client.conf
+    environment:
+      - TZ=America/Lima
+      - CERTBOT_EMAIL=${CERTBOT_EMAIL}
+    networks:
+      - public-network
+    restart: always
+
+  main-service:
+    build:
+      context: ./dreamy-main-service
+      dockerfile: ./deployment/production.Dockerfile
+    container_name: dreamy-main-service
+    environment:
+      - TZ=America/Lima
+    env_file:
+      - ./dreamy-main-service/.env.production
+    networks:
+      - database-network
+      - private-network
+      - messaging-network
+    restart: always
+    depends_on:
+      database-service:
+        condition: service_healthy
+    
+  pdf-service:
+    build: 
+      context: ./dreamy-pdf-service
+      dockerfile: ./deployment/production.Dockerfile
+    container_name: dreamy-pdf-service
+    environment:
+      - TZ=America/Lima
+    env_file:
+      - ./dreamy-pdf-service/.env.production
+    networks:
+      - database-network
+      - messaging-network
+    restart: always
+    depends_on:
+      database-service:
+        condition: service_healthy
+
+  web-client:
+    build:
+      context: ./dreamy-web-client
+      dockerfile: ./deployment/production.Dockerfile
+    container_name: dreamy-web-client
+    environment:
+      - TZ=America/Lima
+    env_file:
+      - ./dreamy-web-client/.env.production
+    networks:
+      - public-network
+      - private-network
+    restart: always
+
+  cache-service:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly
+    container_name: dreamy-cache-service
+    ulimits:
+      memlock: -1
+    environment:
+      - TZ=America/Lima
+    command:
+      - "--requirepass=${DRAGONFLY_PASSWORD}"
+    volumes:
+      - dragonfly-data:/data
+    networks:
+      - database-network
+    restart: always
+
+  database-service:
+    image: postgres:18-trixie
+    container_name: dreamy-database-service
+    environment:
+      - TZ=America/Lima
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - database-network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  messaging-service:
+    image: rabbitmq:4.1-management
+    container_name: dreamy-messaging-service
+    environment: 
+      - TZ=America/Lima
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - rabbitmq-logs:/var/log/rabbitmq
+    networks:
+      - messaging-network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  postgres-data:
+  dragonfly-data:
+  rabbitmq-data:
+  rabbitmq-logs:
+  nginx-certificates:
+
+configs:
+  custom-nginx-configuration:
+    file: ./nginx/custom.nginx-production.conf
+  web-client-nginx-configuration:
+    file: ./nginx/web-client.nginx-testing.conf
+
+networks:
+  public-network:
+    name: dreamy-public-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "192.168.50.0/24"
+          gateway: "192.168.50.1"
+  
+  private-network:
+    name: dreamy-private-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "192.168.75.0/24"
+          gateway: "192.168.75.1"
+
+  database-network:
+    name: dreamy-database-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "192.168.100.0/24"
+          gateway: "192.168.100.1"
+
+  messaging-network:
+    name: dreamy-messaging-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "192.168.125.0/24"
+          gateway: "192.168.125.1"
