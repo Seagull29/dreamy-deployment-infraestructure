@@ -1,12 +1,12 @@
 [submodule "dreamy-main-service"]
 	path = dreamy-main-service
 	url = https://Seagull29@github.com/Seagull29/dreamy-main-service.git
-	branch = dev
+	branch = production
 [submodule "dreamy-web-client"]
 	path = dreamy-web-client
 	url = https://Seagull29@github.com/Seagull29/dreamy-web-client.git
-	branch = dev
+	branch = production
 [submodule "dreamy-pdf-service"]
 	path = dreamy-pdf-service
 	url = https://Seagull29@github.com/Seagull29/dreamy-pdf-service.git
-	branch = dev
+	branch = production
