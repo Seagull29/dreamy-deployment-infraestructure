@@ -58,7 +58,7 @@ services:
   web-client:
     build:
       context: ./dreamy-web-client
-      dockerfile: ./deployment/production.Dockerfile
+      dockerfile: ./deployment/testing.Dockerfile
     container_name: dreamy-web-client
     environment:
       - TZ=America/Lima
